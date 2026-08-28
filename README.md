@@ -208,7 +208,7 @@ jobs:
 
 ## 📄 Lisensi
 
-MIT License — silakan gunakan dan modifikasi sesuai kebutuhan.
+MIT License — silakan gunakan dan modifikasi sesuai kebutuhan. Lihat file [LICENSE](LICENSE) untuk detail lengkap.
 
 ---
 
