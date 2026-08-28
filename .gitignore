@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Output laporan scan (artefak regenerable)
+proxies.json

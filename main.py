@@ -5,7 +5,9 @@ main.py v6.3
 AI Proxy Finder / Validator
 ===========================
 
-Fitur v6.3:
+Fitur v6.4:
+- Two-stage validation: liveness pre-filter cepat via api.iplocate.io/ip
+  (hanya proxy hidup yang lanjut), baru test AI multi-endpoint.
 - Multi-endpoint: test proxy di Responses API DAN Chat Completions.
   Proxy dianggap aktif jika salah satu endpoint mengembalikan output AI.
 - Schema-aware AI response validation.
@@ -48,6 +50,7 @@ from concurrent.futures import (
     FIRST_COMPLETED,
     Future,
     ThreadPoolExecutor,
+    as_completed,
     wait,
 )
 from dataclasses import dataclass
@@ -81,7 +84,7 @@ from rich.syntax import Syntax
 # APP CONFIG
 # ============================================================================
 
-__version__ = "6.3"
+__version__ = "6.4"
 
 console = Console()
 log = logging.getLogger("proxy_finder")
@@ -118,6 +121,15 @@ DEFAULT_WORKERS = 10
 DEFAULT_BATCH_MULTIPLIER = 2
 
 DEFAULT_SKIP_PORT_CHECK = True
+
+# ---------------------------------------------------------------------------
+# Liveness pre-filter (tahap 1: cek hidup/mati cepat)
+# ---------------------------------------------------------------------------
+
+DEFAULT_LIVENESS_URLS: list[str] = [
+    "https://api.iplocate.io/ip",
+]
+LIVENESS_TIMEOUT = 8
 
 PROTOCOL_SCHEME = {
     "http": "http",
@@ -1233,6 +1245,179 @@ def port_check(ip: str, port: int, timeout: float) -> bool:
 
 
 # ============================================================================
+# LIVENESS PRE-FILTER (tahap 1 — cek hidup/mati cepat)
+# ============================================================================
+
+_BODY_IPV4_RE = re.compile(
+    r"(?<!\d)(?:25[0-5]|2[0-4]\d|1?\d?\d)"
+    r"(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}(?!\d)"
+)
+
+
+def _looks_like_ipv6(text: str) -> bool:
+    candidate = text.strip("[] ").strip()
+    if ":" not in candidate or candidate.count(":") < 2:
+        return False
+    for group in candidate.split(":"):
+        if not group:
+            continue
+        if len(group) > 4 or not re.fullmatch(r"[0-9a-fA-F]{1,4}", group):
+            return False
+    return True
+
+
+def body_has_ip(body: str) -> bool:
+    """True bila body berisi IPv4 (atau IPv6) — proxy dianggap hidup."""
+    if _BODY_IPV4_RE.search(body or ""):
+        return True
+    return _looks_like_ipv6(body or "")
+
+
+def _try_liveness_once(
+    proxy_url: str,
+    url: str,
+    connect_timeout: int,
+    read_timeout: int,
+) -> tuple[bool, str]:
+    """Satu GET via proxy ke URL liveness. Return (ok, detail)."""
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/plain, application/json, */*;q=0.2",
+        "Connection": "close",
+    }
+    try:
+        with requests.Session() as session:
+            session.trust_env = False
+            response = session.get(
+                url,
+                headers=headers,
+                proxies={"http": proxy_url, "https": proxy_url},
+                timeout=(connect_timeout, read_timeout),
+                allow_redirects=False,
+            )
+    except requests.exceptions.SSLError as exc:
+        return False, "SSL: " + short(str(exc), 140)
+    except requests.exceptions.ProxyError as exc:
+        return False, "Proxy: " + short(str(exc), 140)
+    except requests.exceptions.ConnectionError as exc:
+        return False, "Conn: " + short(str(exc), 140)
+    except requests.exceptions.Timeout:
+        return False, "Timeout"
+    except requests.exceptions.RequestException as exc:
+        return (
+            False,
+            f"{type(exc).__name__}: " + short(str(exc), 140),
+        )
+
+    if not (200 <= response.status_code < 300):
+        return False, f"HTTP {response.status_code}"
+
+    body = (response.text or "").strip()
+    if body_has_ip(body):
+        return (
+            True,
+            f"HTTP {response.status_code} · body={short(body, 32)}",
+        )
+    return (
+        False,
+        "HTTP 2xx — body tanpa IP: "
+        f"{short(body or '(kosong)', 60)}",
+    )
+
+
+def liveness_probe(
+    entry: ProxyEntry,
+    urls: list[str],
+    connect_timeout: int,
+    read_timeout: int,
+) -> tuple[bool, float, str]:
+    """Coba semua variant proxy × URL liveness.
+    Return (ok, latency_ms, detail)."""
+    started = time.monotonic()
+    variants = proxy_variants(entry)
+    if not variants:
+        return False, 0.0, "unsupported"
+    last_detail = "Unknown liveness error"
+    for proxy_url in variants:
+        for url in urls:
+            ok, detail = _try_liveness_once(
+                proxy_url, url, connect_timeout, read_timeout,
+            )
+            if ok:
+                return (
+                    True,
+                    (time.monotonic() - started) * 1000,
+                    f"ALIVE via {short(url, 44)} ({detail})",
+                )
+            last_detail = detail
+    return (
+        False,
+        (time.monotonic() - started) * 1000,
+        last_detail,
+    )
+
+
+def run_liveness_check(
+    entries: list[ProxyEntry],
+    urls: list[str],
+    workers: int,
+    connect_timeout: int,
+    read_timeout: int,
+) -> tuple[list[ProxyEntry], list[tuple[ProxyEntry, bool, float, str]]]:
+    """Pre-filter paralel: hanya proxy hidup yang dikembalikan."""
+    if not entries:
+        return [], []
+    alive: list[ProxyEntry] = []
+    checked: list[tuple[ProxyEntry, bool, float, str]] = []
+    chunk_size = max(workers * DEFAULT_BATCH_MULTIPLIER, workers)
+
+    with ThreadPoolExecutor(
+        max_workers=workers, thread_name_prefix="live",
+    ) as pool:
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            expand=True,
+        )
+        with Live(console=console, refresh_per_second=6) as live:
+            task_id = progress.add_task(
+                "Liveness pre-filter", total=len(entries),
+            )
+            live.update(progress)
+            for offset in range(0, len(entries), chunk_size):
+                if _shutdown.is_set():
+                    break
+                chunk = entries[offset:offset + chunk_size]
+                future_map = {
+                    pool.submit(
+                        liveness_probe,
+                        entry, urls, connect_timeout, read_timeout,
+                    ): entry
+                    for entry in chunk
+                }
+                for future in as_completed(future_map):
+                    if _shutdown.is_set():
+                        future.cancel()
+                        continue
+                    entry = future_map[future]
+                    try:
+                        ok, latency, detail = future.result()
+                    except Exception as exc:
+                        log.exception("liveness worker failed")
+                        ok, latency, detail = False, 0.0, str(exc)
+                    checked.append((entry, ok, latency, detail))
+                    if ok:
+                        alive.append(entry)
+                    progress.advance(task_id)
+                    live.update(progress)
+
+    return alive, checked
+
+
+# ============================================================================
 # RESPONSE ERROR
 # ============================================================================
 
@@ -1766,6 +1951,11 @@ def terminal_header(args: argparse.Namespace) -> Panel:
     meta.append(args.model, style="bright_cyan")
     meta.append("  •  Workers ", style="dim")
     meta.append(str(args.workers), style="bright_cyan")
+    meta.append("  •  Liveness ", style="dim")
+    meta.append(
+        "ON" if not args.skip_liveness else "OFF",
+        style="bold green" if not args.skip_liveness else "yellow",
+    )
     meta.append("  •  Mode ", style="dim")
     meta.append("ALL" if args.all else "FIRST", style="bold yellow")
     return Panel(Group(title, meta), border_style="cyan", padding=(1, 2))
@@ -2176,12 +2366,31 @@ def save_json(
     total_loaded: int,
     sources: list[str],
     args: argparse.Namespace,
+    liveness: Optional[dict[str, int]] = None,
 ) -> None:
     counter = Counter(r.stage for r in results)
     active = sorted(
         (r for r in results if r.ok),
         key=lambda x: x.latency_ms,
     )
+    stats = {
+        "total_loaded": total_loaded,
+        "total_checked": len(results),
+        "success": counter.get("success", 0),
+        "incomplete": counter.get("incomplete", 0),
+        "invalid_ai_response": counter.get("invalid_ai_response", 0),
+        "region_blocked": counter.get("region_blocked", 0),
+        "rate_limited": counter.get("rate_limited", 0),
+        "auth_required": counter.get("auth_required", 0),
+        "api_error": counter.get("api_error", 0),
+        "test_failed": counter.get("test_failed", 0),
+        "port_closed": counter.get("port_closed", 0),
+        "unsupported": counter.get("unsupported", 0),
+        "skipped": counter.get("skipped", 0),
+    }
+    if liveness:
+        stats["liveness_checked"] = liveness.get("checked", 0)
+        stats["liveness_alive"] = liveness.get("alive", 0)
     payload = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": __version__,
@@ -2198,21 +2407,7 @@ def save_json(
             "all_sources": args.all_sources,
             "sources": sources,
         },
-        "stats": {
-            "total_loaded": total_loaded,
-            "total_checked": len(results),
-            "success": counter.get("success", 0),
-            "incomplete": counter.get("incomplete", 0),
-            "invalid_ai_response": counter.get("invalid_ai_response", 0),
-            "region_blocked": counter.get("region_blocked", 0),
-            "rate_limited": counter.get("rate_limited", 0),
-            "auth_required": counter.get("auth_required", 0),
-            "api_error": counter.get("api_error", 0),
-            "test_failed": counter.get("test_failed", 0),
-            "port_closed": counter.get("port_closed", 0),
-            "unsupported": counter.get("unsupported", 0),
-            "skipped": counter.get("skipped", 0),
-        },
+        "stats": stats,
         "active_proxies": [
             {
                 "protocol": r.entry.protocol,
@@ -2312,6 +2507,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--omniroute-output", default="omniroute.txt")
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--liveness-url", default=None,
+        help=(
+            "URL liveness check (bisa dipisah koma). "
+            f"Default: {DEFAULT_LIVENESS_URLS[0]}"
+        ),
+    )
+    parser.add_argument(
+        "--liveness-timeout", type=int, default=LIVENESS_TIMEOUT,
+        help="Read timeout per liveness request",
+    )
+    parser.add_argument(
+        "--skip-liveness",
+        dest="skip_liveness", action="store_true",
+        help="Lewati pre-filter liveness (langsung test AI)",
+    )
     parser.add_argument("-s", "--shuffle", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--json-output", default=None, metavar="FILE")
@@ -2365,6 +2576,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--max-tokens harus >= 1")
     if args.limit is not None and args.limit < 1:
         raise ValueError("--limit harus >= 1")
+    if args.liveness_timeout < 1:
+        raise ValueError("--liveness-timeout harus >= 1")
     if not args.test_urls:
         raise ValueError("Minimal satu test URL diperlukan")
 
@@ -2386,6 +2599,17 @@ def main() -> int:
         args.test_urls = parse_test_urls(env_url)
     else:
         args.test_urls = list(DEFAULT_TEST_URLS)
+
+    # --- Resolve liveness URLs ---
+    liveness_input = (
+        args.liveness_url
+        or os.getenv("PROXY_LIVENESS_URL", "").strip()
+    )
+    args.liveness_urls = (
+        [u.strip() for u in liveness_input.split(",") if u.strip()]
+        if liveness_input
+        else list(DEFAULT_LIVENESS_URLS)
+    )
 
     try:
         validate_args(args)
@@ -2486,12 +2710,54 @@ def main() -> int:
         )
         return 1
 
+    # --- Liveness pre-filter (tahap 1) ---
+    liveness_stats: Optional[dict[str, int]] = None
+    if not args.skip_liveness:
+        alive_entries, liveness_results = run_liveness_check(
+            entries, args.liveness_urls, args.workers,
+            args.connect_timeout, args.liveness_timeout,
+        )
+        liveness_stats = {
+            "checked": len(liveness_results),
+            "alive": len(alive_entries),
+        }
+        console.print()
+        console.print(
+            Panel(
+                f"[bold]{len(alive_entries)}[/] dari "
+                f"[bold]{len(entries)}[/] proxy HIDUP — "
+                f"endpoint {endpoint_label(args.liveness_urls[0])}",
+                title="[bold cyan]Liveness pre-filter[/]",
+                border_style="cyan",
+            )
+        )
+        entries = alive_entries
+        if not entries:
+            console.print(
+                Panel(
+                    "Tidak ada proxy yang lolos liveness check — "
+                    "semua mati atau tidak bisa menjangkau "
+                    f"{args.liveness_urls[0]}.\n"
+                    "Coba periksa kembali koneksi / --skip-liveness.",
+                    title="[bold yellow]NO ALIVE PROXY[/]",
+                    border_style="yellow",
+                )
+            )
+            return 1
+
     # --- Configuration overview ---
     overview = Table.grid(padding=(0, 2))
     overview.add_column(style="dim")
     overview.add_column(style="bold white")
     proto_counter = Counter(e.protocol for e in entries)
-    overview.add_row("Loaded", str(len(entries)))
+    overview.add_row(
+        "Loaded",
+        (
+            f"{len(entries)} (lolos liveness)"
+            if not args.skip_liveness
+            else str(len(entries))
+        ),
+    )
     overview.add_row(
         "Protocols",
         ", ".join(f"{k}={v}" for k, v in proto_counter.most_common()),
@@ -2509,6 +2775,14 @@ def main() -> int:
     overview.add_row("Proxy mode", "AUTO HTTP/HTTPS + SOCKS")
     overview.add_row(
         "Port pre-check", "OFF" if args.skip_port_check else "ON",
+    )
+    overview.add_row(
+        "Liveness",
+        (
+            f"ON — {short(', '.join(args.liveness_urls), 52)}"
+            if not args.skip_liveness
+            else "OFF"
+        ),
     )
     overview.add_row(
         "Validation",
@@ -2561,6 +2835,7 @@ def main() -> int:
         if args.json_output:
             save_json(
                 args.json_output, results, len(entries), sources, args,
+                liveness=liveness_stats,
             )
         if active:
             console.print(Rule("Fastest working proxy", style="green"))
@@ -2603,6 +2878,7 @@ def main() -> int:
         if args.json_output:
             save_json(
                 args.json_output, results, len(entries), sources, args,
+                liveness=liveness_stats,
             )
             console.print(
                 f"[dim]JSON saved → {args.json_output}[/]"
@@ -2633,6 +2909,7 @@ def main() -> int:
     if args.json_output:
         save_json(
             args.json_output, results, len(entries), sources, args,
+            liveness=liveness_stats,
         )
         console.print(
             f"[dim]JSON saved → {args.json_output}[/]"

@@ -12,6 +12,7 @@
 - **Schema-aware Validation** – Memvalidasi respons AI, menolak respons yang hanya echo prompt, metadata, atau status.
 - **Multi-Protocol Support** – Mendukung HTTP, HTTPS, SOCKS4, dan SOCKS5.
 - **Auto Fallback** – HTTP → HTTPS fallback otomatis pada port 443.
+- **Two-stage Validation** – Pre-filter hidup/mati cepat via `https://api.iplocate.io/ip`; hanya proxy yang hidup yang lanjut ke validasi AI multi-endpoint.
 - **Double-check Verification** – Memverifikasi proxy dua kali sebelum dinyatakan aktif.
 - **Multi-source Proxy** – Menggabungkan proxy dari Proxifly, Monosans, TheSpeedX, dan IPLocate.
 - **Rich Dashboard** – Tampilan real-time dengan `rich` library.
@@ -55,6 +56,9 @@ python main.py --all --all-sources --api-key "YOUR_API_KEY"
 | `--limit` | Batas maksimum proxy yang discan |
 | `--workers` | Jumlah thread paralel (default: 10) |
 | `--max-time` | Read timeout per request (default: 15 detik) |
+| `--liveness-url` | URL liveness check, bisa dipisah koma (default: `https://api.iplocate.io/ip`) |
+| `--liveness-timeout` | Read timeout per liveness request (default: 8 detik) |
+| `--skip-liveness` | Lewati pre-filter liveness (langsung test AI) |
 | `--skip-port-check` | Lewati pengecekan port TCP terpisah |
 | `--probe` | Debug satu proxy tertentu |
 
@@ -133,7 +137,9 @@ jobs:
             --omniroute-output omniroute.txt \
             --json-output proxies.json \
             --workers 20 \
-            --max-time 20
+            --max-time 20 \
+            --liveness-url "https://api.iplocate.io/ip" \
+            --liveness-timeout 8
           SCAN_EXIT=$?
           set -e
           echo "scan_exit=$SCAN_EXIT" >> "$GITHUB_ENV"
@@ -177,10 +183,12 @@ jobs:
 ```json
 {
   "timestamp": "2026-01-01T00:00:00+00:00",
-  "version": "6.3",
+  "version": "6.4",
   "stats": {
-    "total_loaded": 1500,
-    "total_checked": 1500,
+    "total_loaded": 120,
+    "total_checked": 120,
+    "liveness_checked": 1500,
+    "liveness_alive": 120,
     "success": 45
   },
   "active_proxies": [
@@ -208,6 +216,7 @@ jobs:
 | `PROXY_TEST_API_KEY` | API key OpenCode AI |
 | `PROXY_TEST_URL` | Custom endpoint URL (comma separated) |
 | `PROXY_TEST_MODEL` | Model AI (default: `big-pickle`) |
+| `PROXY_LIVENESS_URL` | URL liveness check (comma separated, default: `https://api.iplocate.io/ip`) |
 
 ### Sumber Proxy yang Didukung
 

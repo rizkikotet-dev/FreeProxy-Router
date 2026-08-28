@@ -44,7 +44,9 @@ jobs:
             --omniroute-output omniroute.txt \
             --json-output proxies.json \
             --workers 20 \
-            --max-time 20
+            --max-time 20 \
+            --liveness-url "https://api.iplocate.io/ip" \
+            --liveness-timeout 8
           SCAN_EXIT=$?
           set -e
           echo "scan_exit=$SCAN_EXIT" >> "$GITHUB_ENV"
