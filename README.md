@@ -95,6 +95,10 @@ on:
     - cron: '*/30 * * * *'   # setiap 30 menit
   workflow_dispatch:         # trigger manual
 
+concurrency:
+  group: proxy-scan
+  cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -104,8 +108,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -122,6 +124,7 @@ jobs:
         env:
           PROXY_TEST_API_KEY: ${{ secrets.PROXY_API_KEY }}
         run: |
+          set +e
           python main.py \
             --all \
             --all-sources \
@@ -131,12 +134,21 @@ jobs:
             --json-output proxies.json \
             --workers 20 \
             --max-time 20
+          SCAN_EXIT=$?
+          set -e
+          echo "scan_exit=$SCAN_EXIT" >> "$GITHUB_ENV"
+          echo "Scan finished: exit code ${SCAN_EXIT} (0 = ada proxy aktif, 1 = tidak ada proxy aktif)"
+
+      - name: Warn if no active proxies found
+        if: env.scan_exit == '1'
+        run: |
+          echo "::warning::Scan selesai dengan exit code 1 (tidak ada proxy aktif atau gagal memuat source). Commit/push tetap dijalankan."
 
       - name: Commit and push if changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add proxies.txt omniroute.txt proxies.json
+          git add -A
           git diff --staged --quiet || git commit -m "Auto-update proxy lists [skip ci]"
           git push
 ```
