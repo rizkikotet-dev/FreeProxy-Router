@@ -1,0 +1,5 @@
+# Proxy Bulk Import
+# Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
+# Required: NAME, HOST, PORT
+
+proxy-103.191.218.212-3128|103.191.218.212|3128|||http||active|AI verified twice

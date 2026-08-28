@@ -1,0 +1,52 @@
+name: Proxy Scanner
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # setiap 30 menit
+  workflow_dispatch:         # trigger manual
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write        # izin untuk commit & push
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # diperlukan untuk git push
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests rich
+          pip install "requests[socks]"
+
+      - name: Run proxy scanner
+        env:
+          PROXY_TEST_API_KEY: ${{ secrets.PROXY_API_KEY }}
+        run: |
+          python main.py \
+            --all \
+            --all-sources \
+            --api-key "$PROXY_TEST_API_KEY" \
+            --output proxies.txt \
+            --omniroute-output omniroute.txt \
+            --json-output proxies.json \
+            --workers 20 \
+            --max-time 20
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add proxies.txt omniroute.txt proxies.json
+          git diff --staged --quiet || git commit -m "Auto-update proxy lists [skip ci]"
+          git push
