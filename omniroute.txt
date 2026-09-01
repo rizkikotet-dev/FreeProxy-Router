@@ -2,5 +2,7 @@
 # Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
 # Required: NAME, HOST, PORT
 
-proxy-157.90.113.23-9052|157.90.113.23|9052|||socks5||active|AI verified twice
-proxy-200.125.40.38-5678|200.125.40.38|5678|||socks5||active|AI verified twice
+proxy-177.55.191.22-60606|177.55.191.22|60606|||socks5||active|AI verified twice
+proxy-196.0.113.10-31651|196.0.113.10|31651|||socks5||active|AI verified twice
+proxy-27.115.33.94-4153|27.115.33.94|4153|||socks5||active|AI verified twice
+proxy-57.128.249.250-9052|57.128.249.250|9052|||socks5||active|AI verified twice
