@@ -2,14 +2,9 @@
 # Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
 # Required: NAME, HOST, PORT
 
-proxy-103.89.2.102-8080|103.89.2.102|8080|||http||active|AI verified twice
-proxy-120.232.115.170-17981|120.232.115.170|17981|||http||active|AI verified twice
-proxy-123.121.109.120-8888|123.121.109.120|8888|||http||active|AI verified twice
-proxy-13.212.214.47-8090|13.212.214.47|8090|||http||active|AI verified twice
-proxy-212.112.121.130-8080|212.112.121.130|8080|||http||active|AI verified twice
-proxy-49.149.222.226-8082|49.149.222.226|8082|||http||active|AI verified twice
-proxy-103.76.108.99-80|103.76.108.99|80|||socks5||active|AI verified twice
-proxy-109.172.55.227-1082|109.172.55.227|1082|||socks5||active|AI verified twice
-proxy-177.85.65.177-4153|177.85.65.177|4153|||socks5||active|AI verified twice
-proxy-69.36.63.128-1080|69.36.63.128|1080|||socks5||active|AI verified twice
-proxy-45.61.129.165-9050|45.61.129.165|9050|||socks5||active|AI verified twice
+proxy-160.22.198.12-8082|160.22.198.12|8082|||http||active|AI verified twice
+proxy-170.245.50.65-8080|170.245.50.65|8080|||http||active|AI verified twice
+proxy-202.5.50.151-1080|202.5.50.151|1080|||socks5||active|AI verified twice
+proxy-95.140.118.34-1080|95.140.118.34|1080|||socks5||active|AI verified twice
+proxy-124.248.177.43-1080|124.248.177.43|1080|||socks5||active|AI verified twice
+proxy-45.152.66.150-1025|45.152.66.150|1025|||socks5||active|AI verified twice
