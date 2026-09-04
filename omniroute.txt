@@ -2,25 +2,9 @@
 # Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
 # Required: NAME, HOST, PORT
 
-proxy-104.251.93.167-16062|104.251.93.167|16062|||http||active|AI verified twice
-proxy-160.22.206.83-8082|160.22.206.83|8082|||http||active|AI verified twice
-proxy-163.223.117.201-8080|163.223.117.201|8080|||http||active|AI verified twice
-proxy-217.76.245.80-999|217.76.245.80|999|||http||active|AI verified twice
-proxy-45.154.204.203-9443|45.154.204.203|9443|||http||active|AI verified twice
-proxy-62.182.199.133-3128|62.182.199.133|3128|||http||active|AI verified twice
-proxy-1.179.151.165-31948|1.179.151.165|31948|||socks5||active|AI verified twice
-proxy-103.115.255.225-36331|103.115.255.225|36331|||socks5||active|AI verified twice
-proxy-113.161.134.128-1080|113.161.134.128|1080|||socks5||active|AI verified twice
-proxy-113.166.93.239-5678|113.166.93.239|5678|||socks5||active|AI verified twice
-proxy-138.94.28.234-40658|138.94.28.234|40658|||socks5||active|AI verified twice
-proxy-177.74.141.8-5432|177.74.141.8|5432|||socks5||active|AI verified twice
-proxy-181.204.4.74-5678|181.204.4.74|5678|||socks5||active|AI verified twice
-proxy-181.57.178.146-1080|181.57.178.146|1080|||socks5||active|AI verified twice
-proxy-185.157.111.3-5678|185.157.111.3|5678|||socks5||active|AI verified twice
-proxy-36.64.27.123-5678|36.64.27.123|5678|||socks5||active|AI verified twice
-proxy-58.65.167.165-4145|58.65.167.165|4145|||socks5||active|AI verified twice
-proxy-83.143.24.29-5678|83.143.24.29|5678|||socks5||active|AI verified twice
-proxy-103.176.187.228-9090|103.176.187.228|9090|||socks5||active|AI verified twice
+proxy-103.89.2.102-8080|103.89.2.102|8080|||http||active|AI verified twice
+proxy-160.22.22.85-5678|160.22.22.85|5678|||socks5||active|AI verified twice
+proxy-171.221.240.100-10800|171.221.240.100|10800|||socks5||active|AI verified twice
+proxy-177.54.239.13-4145|177.54.239.13|4145|||socks5||active|AI verified twice
+proxy-94.72.158.129-4153|94.72.158.129|4153|||socks5||active|AI verified twice
 proxy-103.89.2.102-1080|103.89.2.102|1080|||socks5||active|AI verified twice
-proxy-57.128.249.250-9052|57.128.249.250|9052|||socks5||active|AI verified twice
-proxy-62.133.62.18-1082|62.133.62.18|1082|||socks5||active|AI verified twice
