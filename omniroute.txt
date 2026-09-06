@@ -2,10 +2,16 @@
 # Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
 # Required: NAME, HOST, PORT
 
-proxy-101.255.150.238-1080|101.255.150.238|1080|||socks5||active|AI verified twice
-proxy-103.151.155.18-11080|103.151.155.18|11080|||socks5||active|AI verified twice
+proxy-111.90.143.197-60808|111.90.143.197|60808|||http||active|AI verified twice
+proxy-123.112.223.58-8888|123.112.223.58|8888|||http||active|AI verified twice
+proxy-41.196.16.231-1976|41.196.16.231|1976|||http||active|AI verified twice
 proxy-103.18.47.79-4145|103.18.47.79|4145|||socks5||active|AI verified twice
-proxy-103.245.108.202-1080|103.245.108.202|1080|||socks5||active|AI verified twice
-proxy-138.59.177.117-5678|138.59.177.117|5678|||socks5||active|AI verified twice
-proxy-190.14.5.164-5678|190.14.5.164|5678|||socks5||active|AI verified twice
-proxy-196.0.113.10-31651|196.0.113.10|31651|||socks5||active|AI verified twice
+proxy-123.108.98.89-5678|123.108.98.89|5678|||socks5||active|AI verified twice
+proxy-147.45.60.246-1082|147.45.60.246|1082|||socks5||active|AI verified twice
+proxy-182.253.144.75-4153|182.253.144.75|4153|||socks5||active|AI verified twice
+proxy-31.168.143.90-1080|31.168.143.90|1080|||socks5||active|AI verified twice
+proxy-141.98.85.49-1080|141.98.85.49|1080|||socks5||active|AI verified twice
+proxy-40.160.136.215-1080|40.160.136.215|1080|||socks5||active|AI verified twice
+proxy-47.82.98.118-1011|47.82.98.118|1011|||socks5||active|AI verified twice
+proxy-59.152.97.233-1080|59.152.97.233|1080|||socks5||active|AI verified twice
+proxy-94.183.233.251-1080|94.183.233.251|1080|||socks5||active|AI verified twice
