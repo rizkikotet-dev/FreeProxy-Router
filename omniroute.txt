@@ -2,16 +2,14 @@
 # Format: NAME|HOST|PORT|USERNAME|PASSWORD|TYPE|REGION|STATUS|NOTES
 # Required: NAME, HOST, PORT
 
-proxy-111.90.143.197-60808|111.90.143.197|60808|||http||active|AI verified twice
-proxy-123.112.223.58-8888|123.112.223.58|8888|||http||active|AI verified twice
-proxy-41.196.16.231-1976|41.196.16.231|1976|||http||active|AI verified twice
-proxy-103.18.47.79-4145|103.18.47.79|4145|||socks5||active|AI verified twice
-proxy-123.108.98.89-5678|123.108.98.89|5678|||socks5||active|AI verified twice
-proxy-147.45.60.246-1082|147.45.60.246|1082|||socks5||active|AI verified twice
-proxy-182.253.144.75-4153|182.253.144.75|4153|||socks5||active|AI verified twice
-proxy-31.168.143.90-1080|31.168.143.90|1080|||socks5||active|AI verified twice
-proxy-141.98.85.49-1080|141.98.85.49|1080|||socks5||active|AI verified twice
-proxy-40.160.136.215-1080|40.160.136.215|1080|||socks5||active|AI verified twice
-proxy-47.82.98.118-1011|47.82.98.118|1011|||socks5||active|AI verified twice
-proxy-59.152.97.233-1080|59.152.97.233|1080|||socks5||active|AI verified twice
-proxy-94.183.233.251-1080|94.183.233.251|1080|||socks5||active|AI verified twice
+proxy-111.119.162.248-10919|111.119.162.248|10919|||http||active|AI verified twice
+proxy-171.211.127.8-29516|171.211.127.8|29516|||http||active|AI verified twice
+proxy-47.242.254.69-50001|47.242.254.69|50001|||http||active|AI verified twice
+proxy-101.109.245.200-4153|101.109.245.200|4153|||socks5||active|AI verified twice
+proxy-103.115.198.39-5678|103.115.198.39|5678|||socks5||active|AI verified twice
+proxy-105.27.127.70-1080|105.27.127.70|1080|||socks5||active|AI verified twice
+proxy-117.102.101.52-5678|117.102.101.52|5678|||socks5||active|AI verified twice
+proxy-180.191.22.50-4153|180.191.22.50|4153|||socks5||active|AI verified twice
+proxy-187.102.16.66-51327|187.102.16.66|51327|||socks5||active|AI verified twice
+proxy-31.43.33.56-4153|31.43.33.56|4153|||socks5||active|AI verified twice
+proxy-81.16.9.222-3629|81.16.9.222|3629|||socks5||active|AI verified twice
